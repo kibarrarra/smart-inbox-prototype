@@ -1,0 +1,22 @@
+[project]
+name = "smart-inbox-prototype"
+version = "0.1.0"
+description = "Prototype email classifier"
+authors = [{ name = "Kevin Ibarra", email = "kevin.a.ibarra@gmail.com" }]
+dependencies = [
+    "fastapi",
+    "uvicorn[standard]",
+    "openai",
+    "google-api-python-client",
+    "google-auth",
+    "google-auth-httplib2",
+    "python-dotenv",
+    "google-auth-oauthlib",
+    "dotenv",
+    "google-cloud-pubsub"
+]
+requires-python = ">=3.11"
+
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
