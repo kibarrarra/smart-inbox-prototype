@@ -1,0 +1,1 @@
+# This file makes smart-inbox-prototype a proper Python package

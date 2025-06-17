@@ -12,11 +12,14 @@ dependencies = [
     "google-auth-httplib2",
     "python-dotenv",
     "google-auth-oauthlib",
-    "dotenv",
-    "google-cloud-pubsub"
+    "google-cloud-pubsub",
+    "google-cloud-secret-manager"
 ]
 requires-python = ">=3.11"
 
 [build-system]
 requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["src", "scripts"]

@@ -60,4 +60,4 @@ tmp/
 start_ngrok.sh
 start_main.sh
 setup_watch.sh
-.direnv
+.direnv/

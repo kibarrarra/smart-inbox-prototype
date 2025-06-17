@@ -4,16 +4,16 @@ create_watch.py -- create a Gmail Pub/Sub watch and push subscription
 """
 from __future__ import annotations
 import argparse, pathlib, os, json
-import googleapiclient.errors
 
+import googleapiclient.errors
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
-
 from google.cloud import pubsub_v1
 from google.api_core.exceptions import AlreadyExists, NotFound
 
-from shared_constants import STATE_FILE
+# When installed with pip install -e ., these imports will work
+from src.constants import STATE_FILE
 
 SCOPES = ["https://www.googleapis.com/auth/gmail.modify"]
 
@@ -41,17 +41,21 @@ parser.add_argument("--subscription", default="gmail-watch-sub",
                     help="(optional) subscription name")
 args = parser.parse_args()
 
-# ──────────────────── OAuth (browser flow) ───────────────
-root = pathlib.Path(__file__).parent.parent
-token_file  = root / os.getenv("GOOGLE_OAUTH_TOKEN_JSON",  "token.json")
-client_file = root / os.getenv("GOOGLE_OAUTH_CLIENT_JSON", "oauth_client.json")
+# ──────────────────── OAuth (use config.py) ───────────────
+from src.config import cfg
+from google.auth.transport.requests import Request as GoogleAuthRequest
 
-if token_file.exists():
-    creds = Credentials.from_authorized_user_file(token_file, SCOPES)
-else:
-    flow  = InstalledAppFlow.from_client_secrets_file(client_file, SCOPES)
-    creds = flow.run_local_server(port=0)
-    token_file.write_text(creds.to_json())
+# Build credentials from refresh token (same as main.py)
+creds = Credentials(
+    None,
+    refresh_token=cfg.refresh_token,
+    client_id=cfg.client_id,
+    client_secret=cfg.client_secret,
+    token_uri="https://oauth2.googleapis.com/token",
+    scopes=SCOPES,
+)
+if not creds.valid or creds.expired:
+    creds.refresh(GoogleAuthRequest())
 
 gmail = build("gmail", "v1", credentials=creds)
 

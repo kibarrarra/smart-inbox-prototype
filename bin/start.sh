@@ -6,7 +6,7 @@ set -e  # Exit on error
 echo "🚀 Starting Smart Inbox development environment..."
 
 # Check if we're in the right directory
-if [ ! -f "main.py" ]; then
+if [ ! -f "src/main.py" ]; then
     echo "❌ Error: Run this from the project root directory"
     exit 1
 fi
@@ -23,7 +23,7 @@ source .venv/bin/activate
 # Install dependencies if needed
 if ! python -c "import openai" 2>/dev/null; then
     echo "📚 Installing dependencies..."
-    pip install -r requirements.txt || pip install -e .
+    pip install -e .
 fi
 
 # Check for required files
@@ -53,12 +53,12 @@ fi
 
 # Kill any existing processes
 echo "🔪 Killing any existing processes..."
-pkill -f "python main.py" || true
+pkill -f "python.*src.main" || true
 pkill -f ngrok || true
 
 # Start the FastAPI server in background
 echo "🌐 Starting FastAPI server..."
-python main.py &
+python -m src.main &
 SERVER_PID=$!
 
 # Give server time to start
