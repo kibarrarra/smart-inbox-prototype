@@ -33,9 +33,13 @@ from src.constants import STATE_FILE
 # ──────────────────────────────────────────────────────────────────────
 class Settings:
     label_critical: str = os.getenv("LABEL_CRITICAL", "AI/Critical")
+    label_urgent:   str = os.getenv("LABEL_URGENT",   "AI/Urgent")
+    label_medium:   str = os.getenv("LABEL_MEDIUM",   "AI/Medium")
     label_digest:   str = os.getenv("LABEL_DIGEST",   "AI/DigestQueue")
     openai_model:   str = os.getenv("OPENAI_MODEL",   "gpt-4o-mini")
     importance_threshold: float = float(os.getenv("IMPORTANCE_THRESHOLD", 0.5))
+    urgent_threshold: float = float(os.getenv("URGENT_THRESHOLD", 0.8))
+    medium_threshold: float = float(os.getenv("MEDIUM_THRESHOLD", 0.4))
 
 settings = Settings()
 openai.api_key = cfg.OPENAI_KEY
@@ -67,7 +71,7 @@ def gmail_client():
 # ──────────────────────────────────────────────────────────────────────
 class EmailProvider:
     def fetch_message(self, msg_id: str) -> dict: ...
-    def label_message(self, msg_id: str, important: bool): ...
+    def label_message(self, msg_id: str, score: float): ...
 
 class GmailProvider(EmailProvider):
     _svc = None
@@ -92,8 +96,17 @@ class GmailProvider(EmailProvider):
             userId="me", id=msg_id, format="full"
         ).execute()
 
-    def label_message(self, msg_id: str, important: bool):
-        label = self._label_id(settings.label_critical if important else settings.label_digest)
+    def label_message(self, msg_id: str, score: float):
+        """Apply intelligent labels based on importance score"""
+        if score >= settings.urgent_threshold:
+            label = self._label_id(settings.label_critical)
+        elif score >= settings.importance_threshold:
+            label = self._label_id(settings.label_urgent)
+        elif score >= settings.medium_threshold:
+            label = self._label_id(settings.label_medium)
+        else:
+            label = self._label_id(settings.label_digest)
+            
         self._service().users().messages().modify(
             userId="me", id=msg_id, body={"addLabelIds": [label]}
         ).execute()
@@ -101,7 +114,7 @@ class GmailProvider(EmailProvider):
 class OutlookProvider(EmailProvider):
     """Stub – implement Graph API later."""
     def fetch_message(self, msg_id: str) -> dict: raise NotImplementedError
-    def label_message(self, msg_id: str, important: bool): raise NotImplementedError
+    def label_message(self, msg_id: str, score: float): raise NotImplementedError
 
 provider: EmailProvider = GmailProvider()
 
@@ -115,18 +128,36 @@ def decode_pubsub_push(blob: dict) -> Optional[dict]:
 
 def score_importance(subject: str, snippet: str) -> float:
     prompt = (
-        "You are an email-triage model. "
-        "Output ONLY a number 0-1 representing criticality for a hedge-fund PM.\n\n"
-        f"Subject: {subject}\nBody: {snippet[:800]}"
+        "You are an intelligent email triage system for a finance professional. "
+        "Score emails 0.0-1.0 based on urgency and business impact.\n\n"
+        "HIGH PRIORITY (0.7-1.0):\n"
+        "- Trade execution issues, margin calls, system outages\n"
+        "- Client escalations, regulatory deadlines, risk alerts\n"
+        "- Meeting invites from executives or key clients\n"
+        "- Time-sensitive market opportunities\n\n"
+        "MEDIUM PRIORITY (0.3-0.6):\n"
+        "- Regular business communications, meeting requests\n"
+        "- Non-urgent reports, internal updates\n"
+        "- Vendor communications, routine notifications\n\n"
+        "LOW PRIORITY (0.0-0.2):\n"
+        "- Newsletters, marketing emails, social media\n"
+        "- Automated reports, non-critical updates\n"
+        "- Personal emails unrelated to work\n\n"
+        "Respond with ONLY the numeric score (e.g., 0.8).\n\n"
+        f"Subject: {subject}\n"
+        f"Body: {snippet[:800]}"
     )
     resp = openai.chat.completions.create(
         model=settings.openai_model,
         messages=[{"role": "user", "content": prompt}],
-        max_tokens=4,
-        temperature=0.0,
+        max_tokens=8,
+        temperature=0.1,
     )
-    try:   return float(resp.choices[0].message.content.strip())
-    except ValueError: return 0.0
+    try:   
+        score = float(resp.choices[0].message.content.strip())
+        return max(0.0, min(1.0, score))  # Clamp to 0-1 range
+    except ValueError: 
+        return 0.0
 
 # ──────────────────────────────────────────────────────────────────────
 # FastAPI app
@@ -198,7 +229,7 @@ def process_message(msg_id: str, meta: dict):
         headers = {h["name"]: h["value"] for h in raw["payload"]["headers"]}
         subj = headers.get("Subject", "(no subject)")
         score = score_importance(subj, raw.get("snippet", ""))
-        provider.label_message(msg_id, score >= settings.importance_threshold)
+        provider.label_message(msg_id, score)
         logging.info("Scored %.2f on '%s'", score, subj[:60])
     except googleapiclient.errors.HttpError as e:
         logging.error("Error fetching %s: %s", msg_id, e)

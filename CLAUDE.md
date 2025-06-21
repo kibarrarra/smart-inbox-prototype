@@ -401,6 +401,26 @@ IMPORTANCE_THRESHOLD=0.5       # Classification threshold (0-1)
 - **Production Ready** - Includes health checks and proper OAuth token management
 - **Logging** - Comprehensive logging for debugging push notifications
 
+## AI Assistant Instructions
+
+**Project Dependencies**: Always check `PROJECT_DEPENDENCIES.md` for available libraries and system status before suggesting installations. The following are confirmed available:
+- OpenAI, FastAPI, Google APIs, python-dotenv, ngrok
+- Virtual environment is at `.venv/` 
+- All required libraries are pre-installed
+
+**Learning Documentation**: Automatically update `LLMS.md` with:
+- New technical insights discovered during development
+- Performance improvements and their impact
+- Code architecture changes and reasoning
+- Optimization opportunities identified
+- Testing results and accuracy metrics
+
+**Development Approach**: 
+- Focus on working prototypes before code hardening
+- Test changes with real examples when possible
+- Document technical decisions and trade-offs
+- Maintain backward compatibility during iterations
+
 ## Common Issues
 
 - **Authentication Errors**: Delete `token.json` and re-run authentication

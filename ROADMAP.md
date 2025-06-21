@@ -16,7 +16,3 @@ _Last updated: 2025‑06‑10_
 3. **Reproducible infra** (Terraform) before adding teammates.
 4. **Zero vendor lock‑in.** Swap OpenAI out without touching business logic.
 
-## Backlog Reference
-The canonical task IDs (C‑1 … C‑13) live in `docs/backlog.md`. Keep them atomic
-and acceptance‑testable.
-
